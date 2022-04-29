@@ -7,12 +7,14 @@ date: '2022-04-22'
 # Exercise Week 2
 
 ```{r}
-
+rm(list=ls())
+library(tidyverse)
 ```
 
 
 
 ```{r}
+dat <- read_delim("wildschwein_BE.csv")
 
 ```
 
