@@ -9,22 +9,26 @@ date: '2022-04-22'
 ```{r}
 rm(list=ls())
 library(tidyverse)
+library(sf)
+library(terra)
+library(lubridate)
+```
+
+# Task 1
+```{r}
+dat <- read_delim("wildschwein_BE_2056.csv")
+
+dat_sf <- st_as_sf(dat, coords = c("E", "N"), crs = 2056, remove = FALSE)
 ```
 
 
+# Task 2 - Getting an overview
 
 ```{r}
-dat <- read_delim("wildschwein_BE.csv")
+ggplot(dat, aes(Long, Lat, colour=TierID)) +
+    geom_point()
 
 ```
-
-
-
-```{r}
-
-```
-
-
 
 
 ```{r}
