@@ -22,13 +22,25 @@ ws_sf <- st_as_sf(ws, coords = c("E", "N"), crs = 2056, remove = FALSE)
 ```
 
 
+
+--------------------------------------------------------------------------------
+
+
+
 # Task 2 - Getting an overview
 
 Calculate the time difference between subsequent rows 
 
 ```{r}
-ws_sf$timelag <- difftime(lead(ws_sf$DatetimeUTC), ws_sf$DatetimeUTC, units = "secs") %>% 
-    as.integer()
+sum(is.na(ws_sf$DatetimeUTC)) # no na's
+
+ws_sf <- group_by(ws_sf, TierID)
+
+ws_sf <- mutate(ws_sf, timelag = as.integer(difftime(lead(DatetimeUTC), DatetimeUTC, units = "secs")))
+
+# NA's ?
+summary(ws_sf$timelag)
+# 3 NA's, as expected from shifts in 3 groups
 ```
 
 
@@ -48,17 +60,8 @@ ggplot(ws_sf, aes(x = DatetimeUTC, y = TierID)) +
 
     What is the temporal sampling interval between the locations?
 
-
 ```{r}
-# there are two artifacts from difftime -> i.e. two xvery large negative timelags
-
-ws_sf <- filter(ws_sf, timelag >= 0)
-```
-
-
-```{r}
-min(ws_sf$timelag)
-max(ws_sf$timelag)
+range(ws_sf$timelag)
 nrow(filter(ws_sf, timelag >= 27000))
 
 ws_sf %>% 
@@ -72,18 +75,42 @@ ws_sf %>%
 ```
 
 -> temporal sampling intervals are distributed across a range between 12
-& 60367 seconds, with some peaks between 0 & 6000 seconds and some peaks around 10000 seconds
+& 60367 seconds, with some peaks between 0 & 6000 seconds and another large peak around 10000 seconds
+
+
+
+
+--------------------------------------------------------------------------------
 
 
 
 # Task 3 - Deriving movement parameters I: Speed
 
+So far our trajectories only consist of a list of time-stamped spatial locations. So let’s calculate the animal’s steplength based on the Euclidean distance between two subsequent locations.
+
 
 ```{r}
+ws_sf$steplength <- sqrt(((ws_sf$E - lead(ws_sf$E))**2) + ((ws_sf$N - lead(ws_sf$N))**2)) 
 
+summary(ws_sf$steplength)
 ```
 
 
+```{r}
+ws_sf$speed <- (ws_sf$steplength / ws_sf$timelag)
+
+summary(ws_sf$speed)
+```
+
+--> The speed unit should be in meters/seconds (m/S)
+
+
+
+--------------------------------------------------------------------------------
+
+
+
+# Task 4
 
 ```{r}
 
