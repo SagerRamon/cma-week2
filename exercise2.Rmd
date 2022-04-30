@@ -16,49 +16,67 @@ library(lubridate)
 
 # Task 1
 ```{r}
-dat <- read_delim("wildschwein_BE_2056.csv")
+ws <- read_delim("wildschwein_BE_2056.csv")
 
-dat_sf <- st_as_sf(dat, coords = c("E", "N"), crs = 2056, remove = FALSE)
+ws_sf <- st_as_sf(ws, coords = c("E", "N"), crs = 2056, remove = FALSE)
 ```
 
 
 # Task 2 - Getting an overview
 
+Calculate the time difference between subsequent rows 
+
 ```{r}
-ggplot(dat, aes(Long, Lat, colour=TierID)) +
+ws_sf$timelag <- difftime(lead(ws_sf$DatetimeUTC), ws_sf$DatetimeUTC, units = "secs") %>% 
+    as.integer()
+```
+
+
+    How many individuals were tracked?
+    For how long were the individuals tracked? Are there gaps?
+    Were all individuals tracked concurrently or sequentially?
+
+
+```{r}
+ggplot(ws_sf, aes(x = DatetimeUTC, y = TierID)) +
     geom_point()
+```
+- 3 Animals were tracked over a period of approx. 8 months, with one individual being tracked for approx. 1 year. 
+- there seem to be no gaps
+- they were tracked concurrently
 
+
+    What is the temporal sampling interval between the locations?
+
+
+```{r}
+# there are two artifacts from difftime -> i.e. two xvery large negative timelags
+
+ws_sf <- filter(ws_sf, timelag >= 0)
 ```
 
 
 ```{r}
+min(ws_sf$timelag)
+max(ws_sf$timelag)
+nrow(filter(ws_sf, timelag >= 27000))
+
+ws_sf %>% 
+    filter(timelag <= 27000) %>%
+    ggplot(aes(x = timelag)) +
+    geom_histogram(binwidth = 60) +
+    scale_y_log10()
+
+# for visualization purpose 8 timelag values above 27000 were excluded in this histogram
 
 ```
 
-
-
-```{r}
-
-```
+-> temporal sampling intervals are distributed across a range between 12
+& 60367 seconds, with some peaks between 0 & 6000 seconds and some peaks around 10000 seconds
 
 
 
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
+# Task 3 - Deriving movement parameters I: Speed
 
 
 ```{r}
