@@ -12,6 +12,7 @@ library(tidyverse)
 library(sf)
 library(terra)
 library(lubridate)
+library(gridExtra)
 ```
 
 # Task 1
@@ -102,7 +103,7 @@ ws_sf$speed <- (ws_sf$steplength / ws_sf$timelag)
 summary(ws_sf$speed)
 ```
 
---> The speed unit should be in meters/seconds (m/S)
+--> The speed unit is in meters/seconds (m/S)
 
 
 
@@ -110,49 +111,127 @@ summary(ws_sf$speed)
 
 
 
-# Task 4
+# Task 4 - Cross-scale movement analysis
 
 ```{r}
+caro <- read_delim("caro60.csv")
+caro <- st_as_sf(caro, coords = c("E", "N"), crs = 2056, remove = FALSE)
+class(caro)
+```
+
+    Manually reduce the granularity of our sampling interval by selecting every 3rd, 6th and 9th position 
+
+# every 3rd
+```{r}
+seq3 <- seq(1,nrow(caro),3)
+caro_3 <- caro %>% slice(seq3)
+```
+
+
+# every 6th
+```{r}
+seq6 <- seq(1,nrow(caro),6)
+caro_6 <- caro %>% slice(seq6)
+```
+
+
+# every 9th
+```{r}
+seq9 <- seq(1,nrow(caro),9)
+caro_9 <- caro %>% slice(seq9)
+```
+
+
+    Now calculate timelag, steplength and speed for these data sets, just as you did in the last task.  
+
+```{r}
+# function to derive timelag, steplenght & speed
+derivates <- function(sf_data){
+    # timelag
+    sf_data <- mutate(sf_data, timelag = as.integer(difftime(lead(sf_data$DatetimeUTC), sf_data$DatetimeUTC, units = "secs")))
+    # steplength
+    sf_data$steplength <- sqrt(((sf_data$E - lead(sf_data$E))**2) + ((sf_data$N - lead(sf_data$N))**2)) 
+    # speed
+    sf_data$speed <- (sf_data$steplength / sf_data$timelag)
+    
+    sf_data
+}
+```
+
+```{r}
+caro   <- derivates(caro)
+caro_3 <- derivates(caro_3)
+caro_6 <- derivates(caro_6)
+caro_9 <- derivates(caro_9)
+```
+
+
+    To finish the task, compare the speeds visually in a line plot and also visualize the trajectories in a map (see examples below).
+
+    
+```{r}
+# functions to produce the plots
+traj_map <- function(original, resampled, E, N){
+    plot <- ggplot() + 
+        geom_path( data = original,  mapping = aes({{E}}, {{N}}, colour = "cyan"), size = 0.8, alpha = 0.2) +
+        geom_point(data = original,  mapping = aes({{E}}, {{N}}, colour = "cyan"), alpha = 0.2) + 
+        geom_path( data = resampled, mapping = aes({{E}}, {{N}}, colour = "red"),  size = 1) +
+        geom_point(data = resampled, mapping = aes({{E}}, {{N}}, colour = "red"),  size = 1.2) +
+        theme_bw() +
+        theme(legend.justification = "right") +
+        theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.title = element_text(face = "bold", hjust = 0.5))
+
+    plot
+}
+```
+
+```{r}
+# 3 minute interval
+traj_3 <- traj_map(caro, caro_3, E, N) + 
+    scale_colour_discrete(name = "Trajectory", labels = c("1 minute", "3 minutes")) +
+    labs(title = "1-Minute vs. 3-Minute sampling interval") 
+
+# 6 minute interval
+traj_6 <- traj_map(caro, caro_6, E, N) + 
+    scale_colour_discrete(name = "Trajectory", labels = c("1 minute", "6 minutes")) +
+    labs(title = "1-Minute vs. 6-Minute sampling interval") 
+
+# 9 minute interval
+traj_9 <- traj_map(caro, caro_9, E, N) + 
+    scale_colour_discrete(name = "Trajectory", labels = c("1 minute", "9 minutes")) +
+    labs(title = "1-Minute vs. 9-Minute sampling interval") 
+```
+
+```{r, fig.height=12, fig.width=7}
+grid.arrange(traj_3, traj_6, traj_9, ncol = 1)
+
 
 ```
 
 
-
-```{r}
-
-```
+    Interpret the line plot, what do the different lines for the different temporal granularities tell you?
 
 
-
-```{r}
-
-```
-
-
-
-```{r}
+```{r, fig.height=6, fig.width=12}
+ggplot(mapping = aes(x = DatetimeUTC, y = speed)) +
+    geom_line(data = caro, aes(color = "1 minute"),    size = 1) +
+    geom_line(data = caro_3, aes(color = "3 minutes"), size = 1) +
+    geom_line(data = caro_6, aes(color = "6 minutes"), size = 1) +
+    geom_line(data = caro_6, aes(color = "9 minutes"), size = 1) +
+    scale_colour_discrete(name = "Interval") +
+    labs(title = "Speed at different sampling intervals") +
+    theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.title = element_text(face = "bold", hjust = 0.5))
 
 ```
 
+-> It appears as with increasing interval, the speed-peaks decrease, almost like it has "less sensitivity" to changes in speed. This may be because over a larger interval, the step length may (de- or) increase, as position fixes rearrange the perceived path the animal took. It may not represent phases where the animal rested or showed high activity, while during an interval the animal could also have gone 10 meters north and 20 meters south, which would be reflected as only 10m of distance covered during that interval, while in reality 30m where covered.  
+
+-> So, the scale (or granularity) we choose really depends on what the question is, as the granularity can drastically change the absolute values for speed and its context. 
+
+--------------------------------------------------------------------------------
 
 
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
-
+# Task 5: Deriving movement parameters II: Rolling window functions
 
 ```{r}
 
