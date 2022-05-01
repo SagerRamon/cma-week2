@@ -13,6 +13,7 @@ library(sf)
 library(terra)
 library(lubridate)
 library(gridExtra)
+library(zoo)
 ```
 
 # Task 1
@@ -233,34 +234,35 @@ ggplot(mapping = aes(x = DatetimeUTC, y = speed)) +
 
 # Task 5: Deriving movement parameters II: Rolling window functions
 
-```{r}
-
-```
-
-
+A different approach would be to smoothen the derived parameters using a moving window function. The zoo package offers a variate of moving window functions (roll_*). Install this package, load it into the session and use the function roll_mean() to smooth the calculated speed. Familiarise yourself with this function by working on some dummy data
 
 ```{r}
-
+series <- seq(1,20)
+series
+rollmean(series, k = 3, fill = NA, align = "left")
+rollmean(series, k = 4, fill = NA, align = "left")
+rollmean(series, k = 10, fill = NA, align = "left")
 ```
 
-
+Now run rollmeanon the speed variable of the subset (caro). Visualize the output from your moving windows and compare different window sizes (k =).
 
 ```{r}
-
+caro_k3 <- rollmean(caro$speed, k = 3, fill = NA, align = "left")
+caro_k6 <- rollmean(caro$speed, k = 6, fill = NA, align = "left")
+caro_k9 <- rollmean(caro$speed, k = 9, fill = NA, align = "left")
 ```
 
-
-
-```{r}
-
+```{r, fig.height=5, fig.width=11}
+ggplot(caro, aes(x = DatetimeUTC, y = speed)) +
+    geom_line(aes(colour = "k = 1"), size = 1) +
+    geom_line(aes(y = caro_k3, colour = "k = 3"), size = 1) +
+    geom_line(aes(y = caro_k6, colour = "k = 6"), size = 1) +
+    geom_line(aes(y = caro_k9, colour = "k = 9"), size = 1) +
+    scale_colour_discrete(name = "Length of \n rolling window") +
+    labs(title = "Speed smoothened by using 'rolling window functions'") +
+    theme(plot.title = element_text(face = "bold", hjust = 0.5), legend.title = element_text(face = "bold", hjust = 0.5))
+    
 ```
 
-
-
-```{r}
-
-```
-
-
-
+--> The plots look relatively similar as with cross-scale analysis (see above), where with increasing interval, the peaks get smaller. However, it seems as with increasing rolling window, there are more preserved peaks at low speed values, compared to the cross-scale analysis before with higher sampling intervals. With this method, the trajectories for each window stayed the same, which wasn't the case before -> the speed was smoothened over the same distances.
 
